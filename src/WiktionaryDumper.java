@@ -41,6 +41,9 @@ public class WiktionaryDumper {
     static ArrayList<String> errorList = new ArrayList<String>();
     static PreparedStatement psParms;
     static final AtomicInteger globalCounter = new AtomicInteger();
+    static final int NUM_THREAD = 8;
+    static final int MAX_RETRY = 20;
+    static int iteration = 0;
 
     public static void main (String argv []) throws Exception {
     	logLine("Program started.");
@@ -68,10 +71,26 @@ public class WiktionaryDumper {
         saxParser.parse(xmlInput, handler);
         logLine("Parsing completed. Total " + wordList.size() + " words.");
 
+        logLine("Getting and processing Wiktionary articles using " + NUM_THREAD + " threads.");
+        while (!wordList.isEmpty() && iteration < MAX_RETRY) {
+            iteration++;
+            doWork();
+        }
+
+        logLine("Completed all iterations.");
+
+        // Dump the database contents to a file
+        stmt.executeUpdate("backup to dict.db");
+        stmt.close();
+        connection.close();
+        logLine("Saved to dict.db successfully. Everything done.");
+    }
+
+    public static void doWork() throws InterruptedException {
+        logLine("Executing iteration " + iteration);
         int size = wordList.size();
 
         // partitioning
-        final int NUM_THREAD = 8;
         final int CHUNK_SIZE = size / NUM_THREAD;
         final int LAST_CHUNK = size - (NUM_THREAD - 1) * CHUNK_SIZE; // last chunk can be a bit bigger
 
@@ -86,7 +105,6 @@ public class WiktionaryDumper {
             wordList.subList(size - LAST_CHUNK, size))
         );
 
-        logLine("Getting and processing Wiktionary articles using " + NUM_THREAD + " threads.");
         List<Thread> threadList = new ArrayList<Thread>();
         for (int i = 0; i < NUM_THREAD; i++) {
             List<String> workList = parts.get(i);
@@ -108,27 +126,9 @@ public class WiktionaryDumper {
             t.join();
         }
 
-        logLine("Completed phase 1.");
-
-        int count = 0;
-        while (!errorList.isEmpty() && count < 100) {
-        	logLine("Retrying words with error before.");
-        	ArrayList<String> temp = errorList;
-        	errorList = new ArrayList<String>();
-
-        	for (String word : temp) {
-        		processWord(word);
-        	}
-        	count++;
-        }
-
-        logLine("Completed phase 2.");
-
-        // Dump the database contents to a file
-        stmt.executeUpdate("backup to dict.db");
-        stmt.close();
-        connection.close();
-        logLine("Saved to dict.db successfully. Everything done.");
+        // the errorList is now the new wordList, ready for the next iteration
+        wordList = errorList;
+        errorList = new ArrayList<String>();
     }
 
     public static void processWord(String word) {
