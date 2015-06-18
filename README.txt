@@ -1,0 +1,1 @@
+A tool to dump the EN-FR Wiktionary to a sqlite database.
