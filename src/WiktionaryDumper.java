@@ -205,7 +205,8 @@ public class WiktionaryDumper {
             String text = frenchCollection.toString();
 
             // remove useless tags
-            text = text.replace("<span>", "").replace("</span>", "").replace("<a>", "").replace("</a>", "");
+            text = text.replace("<span>", "").replace("</span>", "").replace("<a>", "").replace("</a>", "")
+            		.replace("<strong>", "<b>").replace("</strong>", "</b>");
 
             psParms.setString(1, word);
             psParms.setString(2, text);
