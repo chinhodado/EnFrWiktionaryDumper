@@ -35,7 +35,8 @@ public class SaxHandler extends DefaultHandler {
             currentTitle = value;
         }
         else if (currentElement().equals("text")) {
-            if (value.contains("==French==")) {
+            // skips things like Template:foo, and no word has ":" in it anyway
+            if (value.contains("==French==") && !currentTitle.contains(":")) {
                 WiktionaryDumper.wordList.add(currentTitle);
             }
         }
