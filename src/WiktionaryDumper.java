@@ -93,9 +93,19 @@ public class WiktionaryDumper {
         logLine("Executing iteration " + iteration);
         int size = wordList.size();
 
+        if (size == 0) {
+        	return;
+        }
+
+        int numThread = NUM_THREAD;
+
+        if (numThread >= size) {
+        	numThread = 1;
+        }
+
         // partitioning
-        final int CHUNK_SIZE = size / NUM_THREAD;
-        final int LAST_CHUNK = size - (NUM_THREAD - 1) * CHUNK_SIZE; // last chunk can be a bit bigger
+        final int CHUNK_SIZE = size / numThread;
+        final int LAST_CHUNK = size - (numThread - 1) * CHUNK_SIZE; // last chunk can be a bit bigger
 
         List<List<String>> parts = new ArrayList<List<String>>();
         for (int i = 0; i < size - LAST_CHUNK; i += CHUNK_SIZE) {
@@ -109,7 +119,7 @@ public class WiktionaryDumper {
         );
 
         List<Thread> threadList = new ArrayList<Thread>();
-        for (int i = 0; i < NUM_THREAD; i++) {
+        for (int i = 0; i < numThread; i++) {
             List<String> workList = parts.get(i);
             Runnable r = () -> {
                 for (int n = 0; n < workList.size(); n++) {
