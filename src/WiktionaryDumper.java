@@ -47,9 +47,9 @@ public class WiktionaryDumper {
     static int iteration = 0;
 
     public static void main (String argv []) throws Exception {
-    	logLine("Program started.");
+        logLine("Program started.");
 
-    	Class.forName("org.sqlite.JDBC");
+        Class.forName("org.sqlite.JDBC");
         Connection connection = DriverManager.getConnection("jdbc:sqlite::memory:");
 
         Statement stmt = connection.createStatement();
@@ -90,13 +90,13 @@ public class WiktionaryDumper {
         int size = wordList.size();
 
         if (size == 0) {
-        	return;
+            return;
         }
 
         int numThread = NUM_THREAD;
 
         if (numThread >= size) {
-        	numThread = 1;
+            numThread = 1;
         }
 
         // partitioning
@@ -206,7 +206,7 @@ public class WiktionaryDumper {
 
             // remove useless tags
             text = text.replace("<span>", "").replace("</span>", "").replace("<a>", "").replace("</a>", "")
-            		.replace("<strong>", "<b>").replace("</strong>", "</b>");
+                    .replace("<strong>", "<b>").replace("</strong>", "</b>");
 
             psParms.setString(1, word);
             psParms.setString(2, text);
@@ -219,9 +219,9 @@ public class WiktionaryDumper {
     }
 
     public static void logLine(String txt) {
-    	DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-    	Date date = new Date();
-    	System.out.println(dateFormat.format(date) + ": " + txt);
+        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+        Date date = new Date();
+        System.out.println(dateFormat.format(date) + ": " + txt);
     }
 
     public static boolean isSubheaders(Element elem) {
