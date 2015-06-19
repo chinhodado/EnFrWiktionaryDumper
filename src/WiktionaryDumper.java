@@ -53,11 +53,7 @@ public class WiktionaryDumper {
         Connection connection = DriverManager.getConnection("jdbc:sqlite::memory:");
 
         Statement stmt = connection.createStatement();
-        String sql = "DROP TABLE IF EXISTS Word;";
-        stmt.executeUpdate(sql);
-
-        stmt = connection.createStatement();
-        sql = "CREATE TABLE Word " +
+        String sql = "CREATE TABLE Word " +
                 "( word       TEXT NOT NULL, " +
                 "  definition TEXT) ";
         stmt.executeUpdate(sql);
