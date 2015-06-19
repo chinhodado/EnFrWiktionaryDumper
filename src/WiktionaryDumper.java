@@ -1,5 +1,6 @@
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.net.URLEncoder;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -37,8 +38,8 @@ public class WiktionaryDumper {
         backSectionsMap.put("Anagrams", false);
     }
 
-    static ArrayList<String> wordList = new ArrayList<String>(300000);
-    static ArrayList<String> errorList = new ArrayList<String>();
+    static List<String> wordList = new ArrayList<String>(300000);
+    static List<String> errorList = new ArrayList<String>();
     static PreparedStatement psParms;
     static final AtomicInteger globalCounter = new AtomicInteger();
     static final int NUM_THREAD = 8;
@@ -77,6 +78,7 @@ public class WiktionaryDumper {
             doWork();
         }
 
+        System.out.println();
         logLine("Completed all iterations.");
 
         // Dump the database contents to a file
@@ -87,6 +89,7 @@ public class WiktionaryDumper {
     }
 
     public static void doWork() throws InterruptedException {
+        System.out.println();
         logLine("Executing iteration " + iteration);
         int size = wordList.size();
 
@@ -112,12 +115,10 @@ public class WiktionaryDumper {
                 for (int n = 0; n < workList.size(); n++) {
                     globalCounter.incrementAndGet();
                     if (globalCounter.get() % 120 == 0) System.out.println();
-                    System.out.print(".");
                     processWord(workList.get(n));
                 }
             };
             Thread thread = new Thread(r);
-            System.out.println("Thread " + i + " started.");
             thread.start();
             threadList.add(thread);
         }
@@ -133,8 +134,8 @@ public class WiktionaryDumper {
 
     public static void processWord(String word) {
         try {
-            String html = Jsoup.connect("http://en.wiktionary.org/w/index.php?title=" + word + "&printable=yes")
-                    .ignoreContentType(true).execute().body();
+            String link = "http://en.wiktionary.org/w/index.php?title=" + URLEncoder.encode(word, "UTF-8") + "&printable=yes";
+            String html = Jsoup.connect(link).ignoreContentType(true).execute().body();
 
             // parse and do some initial cleaning of the DOM
             Document doc = Jsoup.parse(html);
@@ -203,8 +204,9 @@ public class WiktionaryDumper {
             psParms.setString(1, word);
             psParms.setString(2, text);
             psParms.executeUpdate();
+            System.out.print(".");
         } catch (Exception e) {
-            System.out.print(word);
+            System.out.print("." + word + ".");
             errorList.add(word);
         }
     }
