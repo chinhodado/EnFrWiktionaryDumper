@@ -54,11 +54,12 @@ public class WiktionaryDumper {
 
         Statement stmt = connection.createStatement();
         String sql = "CREATE TABLE Word " +
-                "( word       TEXT NOT NULL, " +
+                "( name       TEXT NOT NULL, " +
                 "  definition TEXT) ";
         stmt.executeUpdate(sql);
+        stmt.executeUpdate("CREATE INDEX name_idx ON Word (name)");
 
-        psParms = connection.prepareStatement("INSERT INTO Word (word, definition) VALUES (?,?)");
+        psParms = connection.prepareStatement("INSERT INTO Word (name, definition) VALUES (?,?)");
 
         logLine("Parsing xml dump to get word list.");
         InputStream xmlInput  = new FileInputStream("C:\\Users\\trung.do\\Downloads\\enwiktionary-20150602-pages-articles.xml");
