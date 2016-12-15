@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.xml.parsers.SAXParser;
@@ -29,7 +30,7 @@ public class WiktionaryDumper {
     static HashMap<String, Boolean> backSectionsMap;
     static
     {
-        backSectionsMap = new HashMap<String, Boolean>();
+        backSectionsMap = new HashMap<>();
         backSectionsMap.put("Etymology", false);
         backSectionsMap.put("Etymology 1", false);
         backSectionsMap.put("Etymology 2", false);
@@ -38,8 +39,8 @@ public class WiktionaryDumper {
         backSectionsMap.put("Anagrams", false);
     }
 
-    static List<String> wordList = new ArrayList<String>(300000);
-    static List<String> errorList = new ArrayList<String>();
+    static List<String> wordList = new ArrayList<>(300000);
+    static List<String> errorList = new CopyOnWriteArrayList<>();
     static PreparedStatement psParms;
     static final AtomicInteger globalCounter = new AtomicInteger();
     static final int NUM_THREAD = 8;
@@ -104,25 +105,25 @@ public class WiktionaryDumper {
         final int CHUNK_SIZE = size / numThread;
         final int LAST_CHUNK = size - (numThread - 1) * CHUNK_SIZE; // last chunk can be a bit bigger
 
-        List<List<String>> parts = new ArrayList<List<String>>();
+        List<List<String>> parts = new ArrayList<>();
         for (int i = 0; i < size - LAST_CHUNK; i += CHUNK_SIZE) {
-            parts.add(new ArrayList<String>(
+            parts.add(new ArrayList<>(
                 wordList.subList(i, i + CHUNK_SIZE))
             );
         }
 
-        parts.add(new ArrayList<String>(
+        parts.add(new ArrayList<>(
             wordList.subList(size - LAST_CHUNK, size))
         );
 
-        List<Thread> threadList = new ArrayList<Thread>();
+        List<Thread> threadList = new ArrayList<>();
         for (int i = 0; i < numThread; i++) {
             List<String> workList = parts.get(i);
             Runnable r = () -> {
-                for (int n = 0; n < workList.size(); n++) {
+                for (String word : workList) {
                     globalCounter.incrementAndGet();
                     if (globalCounter.get() % 120 == 0) System.out.println();
-                    processWord(workList.get(n));
+                    processWord(word);
                 }
             };
             Thread thread = new Thread(r);
@@ -136,7 +137,7 @@ public class WiktionaryDumper {
 
         // the errorList is now the new wordList, ready for the next iteration
         wordList = errorList;
-        errorList = new ArrayList<String>();
+        errorList = new ArrayList<>();
     }
 
     public static void processWord(String word) {
@@ -150,9 +151,9 @@ public class WiktionaryDumper {
             content.select("script").remove();               // remove <script> tags
             content.select("noscript").remove();             // remove <noscript> tags
             content.select("#toc").remove();                 // remove the table of content
-            WiktionaryDumper.removeComments(content);                         // remove comments
-            WiktionaryDumper.removeAttributes(content);                       // remove all attributes. Has to be at the end, otherwise can't grab id, etc.
-            WiktionaryDumper.removeEmptyTags(content);                        // remove all empty tags
+            WiktionaryDumper.removeComments(content);        // remove comments
+            WiktionaryDumper.removeAttributes(content);      // remove all attributes. Has to be at the end, otherwise can't grab id, etc.
+            WiktionaryDumper.removeEmptyTags(content);       // remove all empty tags
 
             // parse for the content of the French section, if it exist
             Elements children = content.children();
