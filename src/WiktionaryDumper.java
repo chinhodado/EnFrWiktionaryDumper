@@ -300,4 +300,8 @@ public class WiktionaryDumper {
             }
         }
     }
+
+    static List<String> getWordList() {
+        return wordList;
+    }
 }

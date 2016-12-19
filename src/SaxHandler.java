@@ -8,8 +8,8 @@ import org.xml.sax.helpers.DefaultHandler;
  * Hander for the SAX parser
  */
 public class SaxHandler extends DefaultHandler {
-    ArrayList<String> elementStack = new ArrayList<String>();
-    String currentTitle = null;
+    private ArrayList<String> elementStack = new ArrayList<>();
+    private String currentTitle = null;
 
     @Override
     public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
@@ -37,7 +37,7 @@ public class SaxHandler extends DefaultHandler {
         else if (currentElement().equals("text")) {
             // skips things like Template:foo, and no word has ":" in it anyway
             if (value.contains("==French==") && !currentTitle.contains(":")) {
-                WiktionaryDumper.wordList.add(currentTitle);
+                WiktionaryDumper.getWordList().add(currentTitle);
             }
         }
     }
