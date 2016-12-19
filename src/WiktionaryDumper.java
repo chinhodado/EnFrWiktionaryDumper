@@ -27,7 +27,7 @@ import org.jsoup.select.Elements;
 
 public class WiktionaryDumper {
     // sections that we want to remove
-    static HashMap<String, Boolean> backSectionsMap;
+    private static HashMap<String, Boolean> backSectionsMap;
     static
     {
         backSectionsMap = new HashMap<>();
@@ -39,13 +39,13 @@ public class WiktionaryDumper {
         backSectionsMap.put("Anagrams", false);
     }
 
-    static List<String> wordList = new ArrayList<>(300000);
-    static List<String> errorList = new CopyOnWriteArrayList<>();
-    static PreparedStatement psParms;
-    static final AtomicInteger globalCounter = new AtomicInteger();
-    static final int NUM_THREAD = 8;
-    static final int MAX_RETRY = 20;
-    static int iteration = 0;
+    private static List<String> wordList = new ArrayList<>(300000);
+    private static List<String> errorList = new CopyOnWriteArrayList<>();
+    private static PreparedStatement psParms;
+    private static final AtomicInteger globalCounter = new AtomicInteger();
+    private static final int NUM_THREAD = 8;
+    private static final int MAX_RETRY = 20;
+    private static int iteration = 0;
 
     public static void main (String argv []) throws Exception {
         logLine("Program started.");
@@ -86,7 +86,7 @@ public class WiktionaryDumper {
         logLine("Saved to dict.db successfully. Everything done.");
     }
 
-    public static void doWork() throws InterruptedException {
+    private static void doWork() throws InterruptedException {
         System.out.println();
         logLine("Executing iteration " + iteration);
         int size = wordList.size();
@@ -140,7 +140,7 @@ public class WiktionaryDumper {
         errorList = new ArrayList<>();
     }
 
-    public static void processWord(String word) {
+    private static void processWord(String word) {
         try {
             String link = "http://en.wiktionary.org/w/index.php?title=" + URLEncoder.encode(word, "UTF-8") + "&printable=yes";
             String html = Jsoup.connect(link).ignoreContentType(true).execute().body();
@@ -220,21 +220,21 @@ public class WiktionaryDumper {
         }
     }
 
-    public static void logLine(String txt) {
+    private static void logLine(String txt) {
         DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
         Date date = new Date();
         System.out.println(dateFormat.format(date) + ": " + txt);
     }
 
-    public static boolean isSubheaders(Element elem) {
+    private static boolean isSubheaders(Element elem) {
         return elem.tagName().equals("h3") || elem.tagName().equals("h4") || elem.tagName().equals("h5");
     }
 
-    public static boolean isBackSectionHeader(Element elem) {
+    private static boolean isBackSectionHeader(Element elem) {
         return isSubheaders(elem) && backSectionsMap.containsKey(elem.text());
     }
 
-    public static void removeComments(Node node) {
+    private static void removeComments(Node node) {
         for (int i = 0; i < node.childNodes().size();) {
             Node child = node.childNode(i);
             if (child.nodeName().equals("#comment"))
@@ -246,7 +246,7 @@ public class WiktionaryDumper {
         }
     }
 
-    public static void removeAttributes(Element doc) {
+    private static void removeAttributes(Element doc) {
         Elements el = doc.getAllElements();
         for (Element e : el) {
             Attributes at = e.attributes();
@@ -256,7 +256,7 @@ public class WiktionaryDumper {
         }
     }
 
-    public static void removeEmptyTags(Element doc) {
+    private static void removeEmptyTags(Element doc) {
         for (Element element : doc.select("*")) {
             if (!element.hasText() && element.isBlock()) {
                 element.remove();
