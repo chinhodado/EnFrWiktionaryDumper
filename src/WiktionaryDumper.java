@@ -58,7 +58,7 @@ public class WiktionaryDumper {
                 "( name       TEXT NOT NULL, " +
                 "  definition TEXT) ";
         stmt.executeUpdate(sql);
-        stmt.executeUpdate("CREATE INDEX name_idx ON Word (name)");
+        stmt.executeUpdate("CREATE INDEX name_idx ON Word (name collate nocase)");
 
         psParms = connection.prepareStatement("INSERT INTO Word (name, definition) VALUES (?,?)");
 
