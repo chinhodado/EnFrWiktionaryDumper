@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Scanner;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -42,10 +43,10 @@ public class WiktionaryDumper {
     private static List<String> wordList = new ArrayList<>(300000);
     private static List<String> errorList = new CopyOnWriteArrayList<>();
     private static PreparedStatement psParms;
-    private static final AtomicInteger globalCounter = new AtomicInteger();
+    private static final AtomicInteger doneCounter = new AtomicInteger();
     private static final int NUM_THREAD = 8;
-    private static final int MAX_RETRY = 20;
     private static int iteration = 0;
+    private static int totalWords;
 
     public static void main (String argv []) throws Exception {
         logLine("Program started.");
@@ -69,11 +70,21 @@ public class WiktionaryDumper {
         SaxHandler handler = new SaxHandler();
         saxParser.parse(xmlInput, handler);
         logLine("Parsing completed. Total " + wordList.size() + " words.");
+        totalWords = wordList.size();
 
         logLine("Getting and processing Wiktionary articles using " + NUM_THREAD + " threads.");
-        while (!wordList.isEmpty() && iteration < MAX_RETRY) {
+        Scanner in = new Scanner(System.in);
+        while (!wordList.isEmpty()) {
             iteration++;
             doWork();
+
+            if (!wordList.isEmpty()) {
+                System.out.println("Do you want to retry the " + wordList.size() + " words with error? (y/n)");
+                String s = in.next();
+                if (s.equals("n")) {
+                    break;
+                }
+            }
         }
 
         System.out.println();
@@ -88,8 +99,8 @@ public class WiktionaryDumper {
 
     private static void doWork() throws InterruptedException {
         System.out.println();
-        logLine("Executing iteration " + iteration);
         int size = wordList.size();
+        logLine("Executing iteration " + iteration + ", words left: " + size);
 
         if (size == 0) {
             return;
@@ -121,8 +132,6 @@ public class WiktionaryDumper {
             List<String> workList = parts.get(i);
             Runnable r = () -> {
                 for (String word : workList) {
-                    globalCounter.incrementAndGet();
-                    if (globalCounter.get() % 120 == 0) System.out.println();
                     processWord(word);
                 }
             };
@@ -131,8 +140,37 @@ public class WiktionaryDumper {
             threadList.add(thread);
         }
 
+        Thread logThread = new Thread(() -> {
+            while (!Thread.interrupted()) {
+                System.out.print("\r");
+                int done = doneCounter.get();
+                int error = errorList.size();
+                double percentage = (double)done / totalWords * 100;
+                System.out.print("Completed: " + done + "/" + totalWords + "(" + percentage + "%), error: " + error + "                  ");
+
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        });
+
+        logThread.start();
+
         for(Thread t : threadList) {
             t.join();
+        }
+
+        logThread.interrupt();
+        logThread.join();
+
+        if (!errorList.isEmpty()) {
+            System.out.println("\nError remaining: ");
+            for (String s : errorList) {
+                System.out.print(s + " | ");
+            }
+            System.out.println();
         }
 
         // the errorList is now the new wordList, ready for the next iteration
@@ -213,9 +251,8 @@ public class WiktionaryDumper {
             psParms.setString(1, word);
             psParms.setString(2, text);
             psParms.executeUpdate();
-            System.out.print(".");
+            doneCounter.incrementAndGet();
         } catch (Exception e) {
-            System.out.print("." + word + ".");
             errorList.add(word);
         }
     }
