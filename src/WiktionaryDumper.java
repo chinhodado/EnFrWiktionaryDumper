@@ -18,8 +18,6 @@ import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
 import org.jsoup.Jsoup;
-import org.jsoup.nodes.Attribute;
-import org.jsoup.nodes.Attributes;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
@@ -238,10 +236,7 @@ public class WiktionaryDumper {
     private static void removeAttributes(Element doc) {
         Elements el = doc.getAllElements();
         for (Element e : el) {
-            Attributes at = e.attributes();
-            for (Attribute a : at) {
-                e.removeAttr(a.getKey());
-            }
+            e.clearAttributes();
         }
     }
 
