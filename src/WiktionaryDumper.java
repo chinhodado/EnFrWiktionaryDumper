@@ -9,7 +9,6 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -26,20 +25,10 @@ import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
 import org.jsoup.select.Elements;
 
+/**
+ * Dump wiktionary to raw_en-fr_dict.db with minimal processing
+ */
 public class WiktionaryDumper {
-    // sections that we want to remove
-    private static HashMap<String, Boolean> backSectionsMap;
-    static
-    {
-        backSectionsMap = new HashMap<>();
-        backSectionsMap.put("Etymology", false);
-        backSectionsMap.put("Etymology 1", false);
-        backSectionsMap.put("Etymology 2", false);
-        backSectionsMap.put("Pronunciation", false);
-        backSectionsMap.put("Conjugation", false);
-        backSectionsMap.put("Anagrams", false);
-    }
-
     private static List<String> wordList = new ArrayList<>(300000);
     private static List<String> errorList = new CopyOnWriteArrayList<>();
     private static PreparedStatement psParms;
@@ -59,12 +48,11 @@ public class WiktionaryDumper {
                 "( name       TEXT NOT NULL, " +
                 "  definition TEXT) ";
         stmt.executeUpdate(sql);
-        stmt.executeUpdate("CREATE INDEX name_idx ON Word (name collate nocase)");
 
         psParms = connection.prepareStatement("INSERT INTO Word (name, definition) VALUES (?,?)");
 
         logLine("Parsing xml dump to get word list.");
-        InputStream xmlInput  = new FileInputStream("C:\\Users\\trung.do\\Downloads\\enwiktionary-20150602-pages-articles.xml");
+        InputStream xmlInput  = new FileInputStream("C:\\Users\\tdo\\Downloads\\enwiktionary-20170120-pages-articles.xml");
         SAXParserFactory factory = SAXParserFactory.newInstance();
         SAXParser saxParser = factory.newSAXParser();
         SaxHandler handler = new SaxHandler();
@@ -91,10 +79,10 @@ public class WiktionaryDumper {
         logLine("Completed all iterations.");
 
         // Dump the database contents to a file
-        stmt.executeUpdate("backup to dict.db");
+        stmt.executeUpdate("backup to raw_en-fr_dict.db");
         stmt.close();
         connection.close();
-        logLine("Saved to dict.db successfully. Everything done.");
+        logLine("Saved to raw_en-fr_dict.db successfully. Everything done.");
     }
 
     private static void doWork() throws InterruptedException {
@@ -196,46 +184,18 @@ public class WiktionaryDumper {
             // parse for the content of the French section, if it exist
             Elements children = content.children();
             boolean frenchFound = false;
-            boolean frenchEndReached = false;
-            boolean isCurrentlyBackSection = false;
             Elements frenchCollection = new Elements();
             for (Element elem : children) {
                 if (!frenchFound) {
                     if (elem.tagName().equals("h2") && elem.text().equals("French")) {
                         frenchFound = true;
                     }
-                    else {
-                        elem.remove();
-                    }
                 }
                 else {
-                    if (!elem.tagName().equals("h2")  &&                                          // French, English, etc.
-                        !(elem.tagName().equals("h3") && elem.text().equals("External links")) && // remove external links section
-                        !frenchEndReached) {
-                        // get etylmology, pronunciation, etc. sections so that we can move them to the back
-                        // of the page later, instead of having them at the beginning of the page
-                        if (WiktionaryDumper.isBackSectionHeader(elem)) {
-                            WiktionaryDumper.backSectionsMap.put(elem.text(), true);
-                            isCurrentlyBackSection = true;
-                        }
-                        else if (WiktionaryDumper.isSubheaders(elem)) {
-                            // something other than etymology and pronunciation, etc.
-                            if (isCurrentlyBackSection) {
-                                isCurrentlyBackSection = false;
-                                // TODO: clear the map?
-                            }
-                            frenchCollection.add(elem);
-                        }
-                        else if (isCurrentlyBackSection) {
-                            // do nothing
-                        }
-                        else {
-                            isCurrentlyBackSection = false;
-                            frenchCollection.add(elem);
-                        }
+                    if (!elem.tagName().equals("h2")) {  // French, English, etc.
+                        frenchCollection.add(elem);
                     }
                     else {
-                        frenchEndReached = true;
                         break;
                     }
                 }
@@ -246,7 +206,7 @@ public class WiktionaryDumper {
 
             // remove useless tags
             text = text.replace("<span>", "").replace("</span>", "").replace("<a>", "").replace("</a>", "")
-                    .replace("<strong>", "<b>").replace("</strong>", "</b>");
+                    .replace("<strong>", "<b>").replace("</strong>", "</b>").replace("<img>", "");
 
             psParms.setString(1, word);
             psParms.setString(2, text);
@@ -261,14 +221,6 @@ public class WiktionaryDumper {
         DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
         Date date = new Date();
         System.out.println(dateFormat.format(date) + ": " + txt);
-    }
-
-    private static boolean isSubheaders(Element elem) {
-        return elem.tagName().equals("h3") || elem.tagName().equals("h4") || elem.tagName().equals("h5");
-    }
-
-    private static boolean isBackSectionHeader(Element elem) {
-        return isSubheaders(elem) && backSectionsMap.containsKey(elem.text());
     }
 
     private static void removeComments(Node node) {
