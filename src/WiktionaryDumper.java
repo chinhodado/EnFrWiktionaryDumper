@@ -176,7 +176,7 @@ public class WiktionaryDumper {
             content.select("noscript").remove();             // remove <noscript> tags
             content.select("#toc").remove();                 // remove the table of content
             WiktionaryDumper.removeComments(content);        // remove comments
-            WiktionaryDumper.removeAttributes(content);      // remove all attributes. Has to be at the end, otherwise can't grab id, etc.
+
             WiktionaryDumper.removeEmptyTags(content);       // remove all empty tags
 
             // parse for the content of the French section, if it exist
@@ -199,6 +199,12 @@ public class WiktionaryDumper {
                 }
             }
 
+            // remove citations
+            removeCitations(frenchCollection);
+
+            // remove all attributes. Has to be at the end, otherwise can't grab id, class, etc.
+            removeAttributes(frenchCollection);
+
             // convert to text
             String text = frenchCollection.toString();
 
@@ -212,6 +218,22 @@ public class WiktionaryDumper {
             doneCounter.incrementAndGet();
         } catch (Exception e) {
             errorList.add(word);
+        }
+    }
+
+    /**
+     * Remove all citations. Ideally this shouldn't be done in this class but it
+     * relies on class and style of some elements so it can't easily be done once
+     * all attributes have been striped out.
+     * @param elements List of all elements to find and remove citations
+     */
+    private static void removeCitations(Elements elements) {
+        for (Element elem : elements) {
+            for (Element child : elem.children()) {
+                if (child.attr("style").equals("display: block;") && child.html().contains("citation-whole")) {
+                    child.remove();
+                }
+            }
         }
     }
 
@@ -237,6 +259,12 @@ public class WiktionaryDumper {
         Elements el = doc.getAllElements();
         for (Element e : el) {
             e.clearAttributes();
+        }
+    }
+
+    private static void removeAttributes(Elements elems) {
+        for (Element e : elems) {
+            removeAttributes(e);
         }
     }
 
